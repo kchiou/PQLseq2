@@ -13,6 +13,7 @@
 #' @param maxIter maximum number of iterations for fitting the model
 #' @param tol a threshold parameter to declare convergence
 #' @param ncores number of cpus to use for parallel computing
+#' @param x_name optional name of predicting variable
 #' @param filter whether to filter out genes that do not have at least two
 #'   individuals having read counts greater than 5
 #' @param check_K whether to check if the relatedness matrix K is positive
@@ -27,11 +28,12 @@
 #' for a gene/site. The results include:
 #' \item{outcome}{name of the analyzed gene/site}
 #' \item{n}{number of individuals}
-#' \item{intercept}{intercept estimate}
-#' \item{se_intercept}{standard error of the intercept estimate}
-#' \item{beta}{fixed effect estimate for the predicting variable of interest}
-#' \item{se_beta}{standard error of the beta estimate}
-#' \item{pvalue}{Wald test p value for testing H0:beta = 0}
+#' \item{intercept_beta}{intercept estimate}
+#' \item{intercept_se_beta}{standard error of the intercept estimate}
+#' \item{intercept_pvalue}{p value of the intercept estimate}
+#' \item{x_beta}{fixed effect estimate for the predicting variable of interest}
+#' \item{x_se_beta}{standard error of the beta estimate}
+#' \item{x$pvalue}{Wald test p value for testing H0:beta = 0}
 #' \item{h2}{heritability estimate}
 #' \item{sigma2}{total variance component}
 #' \item{converged}{whether the algorithm converged}
@@ -39,7 +41,7 @@
 #' 
 #' @export
 pqlseq2 <- function(Y, x, K, W = NULL, lib_size = NULL, model = c("PMM", "BMM"), 
-  maxIter = 500, tol = 1e-5, ncores = 1, filter = TRUE, check_K = FALSE, 
+  maxIter = 500, tol = 1e-5, ncores = 1, x_name = NULL, filter = TRUE, check_K = FALSE, 
   nngp = FALSE, k = 10, fix_h2eq1 = FALSE, outfile = NULL, verbose = FALSE)
 {
   # 1.check inputs
@@ -191,12 +193,32 @@ pqlseq2 <- function(Y, x, K, W = NULL, lib_size = NULL, model = c("PMM", "BMM"),
           if(fix_h2eq1 & all(res$taus == 0)){
             res$h2 <- 1
           }
+	      
+	      # Modifications to PQLseq2 code below
+	      all.var.names = c('intercept','x',gsub('^W','',colnames(Wx)[2:(ncol(Wx)-1)]))
+	      all.betas = c(res$alpha[1],res$beta,res$alpha[2:length(res$alpha)])
+	      all.se.betas = c(diag(res$cov)[1],se_beta,diag(res$cov)[2:length(res$alpha)])
+	      all.p.values = pchisq((all.betas / all.se.betas)^2, df = 1, lower.tail = F)
+	      if (!is.null(x_name)) all.var.names[2] = x_name
+	      
+	      all.model.outputs = as.list(as.numeric(rbind(all.betas,all.se.betas,all.p.values)))
+	      names(all.model.outputs) = unlist(lapply(all.var.names,function(x) gsub(' ','.',paste0(rep(x,3),'_',c('beta','se_beta','pvalue')))))
           
-          ests <- data.frame(outcome = colnames(Y)[i], n = res$n, 
-            intercept = res$intercept, se_intercept = se_intercept,
-            beta = beta, se_beta = se_beta, pvalue = pvalue, h2 = res$h2, 
-            sigma2 = res$sigma2, converged = res$converged, 
-            elapsed_time = res$elapsed_time)
+	      ests <- data.frame(
+	        outcome = colnames(Y)[i],
+	        n = res$n, 
+	        do.call(data.frame,all.model.outputs),
+	        h2 = res$h2, 
+	        sigma2 = res$sigma2,
+	        converged = res$converged, 
+	        elapsed_time = res$elapsed_time
+	      )
+          
+          # ests <- data.frame(outcome = colnames(Y)[i], n = res$n, 
+          #   intercept = res$intercept, se_intercept = se_intercept,
+          #   beta = beta, se_beta = se_beta, pvalue = pvalue, h2 = res$h2, 
+          #   sigma2 = res$sigma2, converged = res$converged, 
+          #   elapsed_time = res$elapsed_time)
           if(verbose){
             others <- list(taus = res$taus, P = res$P, cov = res$cov, 
               alpha = res$alpha, se_alpha = sqrt(diag(res$cov))[-nrow(res$cov)], 

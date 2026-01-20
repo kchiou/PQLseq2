@@ -14,6 +14,7 @@ pqlseq2(
   maxIter = 500,
   tol = 1e-05,
   ncores = 1,
+  x_name = NULL,
   filter = TRUE,
   check_K = FALSE,
   nngp = FALSE,
@@ -42,6 +43,8 @@ pqlseq2(
 
 \item{ncores}{number of cpus to use for parallel computing}
 
+\item{x_name}{optional name of predicting variable}
+
 \item{filter}{whether to filter out genes that do not have at least two
 individuals having read counts greater than 5}
 
@@ -63,11 +66,12 @@ definite or not and map it to the nearest PD matrix if not.}
 for a gene/site. The results include:
 \item{outcome}{name of the analyzed gene/site}
 \item{n}{number of individuals}
-\item{intercept}{intercept estimate}
-\item{se_intercept}{standard error of the intercept estimate}
-\item{beta}{fixed effect estimate for the predicting variable of interest}
-\item{se_beta}{standard error of the beta estimate}
-\item{pvalue}{Wald test p value for testing H0:beta = 0}
+\item{intercept_beta}{intercept estimate}
+\item{intercept_se_beta}{standard error of the intercept estimate}
+\item{intercept_pvalue}{p value of the intercept estimate}
+\item{x_beta}{fixed effect estimate for the predicting variable of interest}
+\item{x_se_beta}{standard error of the beta estimate}
+\item{x_pvalue}{Wald test p value for testing H0:beta = 0}
 \item{h2}{heritability estimate}
 \item{sigma2}{total variance component}
 \item{converged}{whether the algorithm converged}
